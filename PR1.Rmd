@@ -1,0 +1,97 @@
+---
+title: "Project 1"
+date: "15 May 2020"
+output: html_document
+---
+## Loading and preprocessing the data
+
+```{r, echo=TRUE}
+
+library(readr)
+activity <- read_csv("activity.csv")
+
+```
+
+## What is mean total number of steps taken per day?
+
+We first ignore the missing values in the dataset.
+
+```{r, echo=TRUE}
+
+dailysteps <- aggregate(steps ~ date, activity , sum, na.rm=TRUE)
+hist(dailysteps$steps, xlab="Daily Steps", main="Histogram for the Daily Number of Steps")
+
+mean(dailysteps$steps)
+median(dailysteps$steps)
+
+```
+
+The mean number of daily steps is 10766.19; the median number of daily steps is 10765.
+
+## What is the average daily activity pattern?
+
+```{r, echo=TRUE}
+
+intervalsteps <- aggregate(steps ~ interval, activity, mean, na.rm=TRUE)
+plot(steps~interval, intervalsteps,type="l", main="Average Daily Activity Pattern")
+
+intervalsteps[which.max(intervalsteps$steps),]$interval
+
+```
+
+The interval with the highest number of average steps is 835. 
+
+## Imputing missing values
+
+There are 2304 rows with missing values. We impute the mean for the interval where there are missing values in the dataset. 
+
+```{r, echo=TRUE}
+sum(is.na(activity))
+
+getMeanStepsPerInterval<-function(interval){
+    intervalsteps[intervalsteps$interval==interval,]$steps
+}
+
+activityNoNA<-activity
+for(i in 1:nrow(activityNoNA)){
+    if(is.na(activityNoNA[i,]$steps)){
+        activityNoNA[i,]$steps <- getMeanStepsPerInterval(activityNoNA[i,]$interval)
+    }
+}
+
+totalStepsPerDayNoNA <- aggregate(steps ~ date, data=activityNoNA, sum)
+hist(totalStepsPerDayNoNA$steps, main="Histogram after Imputation", xlab="Total Steps Per Day")
+
+mean(totalStepsPerDayNoNA$steps)
+median(totalStepsPerDayNoNA$steps)
+
+```
+
+After imputation, the mean number of daily steps is 10766.19; the median number of daily steps is 10765. The values do not change, so using mean imputation does not affect the mean or median. 
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+```{r, echo=TRUE}
+activityNoNA$date <- as.Date(strptime(activityNoNA$date, format="%Y-%m-%d"))
+activityNoNA$day <- weekdays(activityNoNA$date)
+for (i in 1:nrow(activityNoNA)) {
+    if (activityNoNA[i,]$day %in% c("Saturday","Sunday")) {
+        activityNoNA[i,]$day<-"weekend"
+    }
+    else{
+        activityNoNA[i,]$day<-"weekday"
+    }
+}
+stepsByDay <- aggregate(activityNoNA$steps ~ activityNoNA$interval + activityNoNA$day, activityNoNA, mean)
+
+names(stepsByDay) <- c("interval", "day", "steps")
+library(lattice)
+xyplot(steps ~ interval | day, stepsByDay, type = "l", layout = c(1, 2), 
+    xlab = "Interval", ylab = "Number of steps")
+
+
+```
+
+
+
+
